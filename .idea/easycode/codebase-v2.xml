@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="com.obiscr.chatgpt.settings.EasyCodeState">
+    <option name="projectFiles" value="$PROJECT_DIR$/test.html" />
+    <option name="forceFullIndex" value="false" />
+    <option name="fileSummaryMaps" value="{&quot;C:/Users/Maelstorm/Desktop/PLUG&quot;:&quot;{\&quot;/test.html\&quot;:\&quot;This file is a basic HTML document that sets up the structure for a web page. It includes the necessary HTML tags, such as `\\u003chtml\\u003e`, `\\u003chead\\u003e`, and `\\u003cbody\\u003e`, but does not contain any classes or functions. The purpose of this file is to provide a starting point for creating a web page with a title of \\\&quot;Titlesss\\\&quot;.\&quot;}&quot;}" />
+    <option name="fileSkeletonMaps" value="{&quot;C:/Users/Maelstorm/Desktop/PLUG&quot;:&quot;{\&quot;/test.html\&quot;:{\&quot;file_path\&quot;:\&quot;/test.html\&quot;,\&quot;file_name\&quot;:\&quot;test.html\&quot;,\&quot;methods\&quot;:[]}}&quot;}" />
+  </component>
+</project>
