@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -29,9 +29,6 @@ include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-shortcodes.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-helpers.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-logs.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cron.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/database.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/settings.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/ajax-handler.php';
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {
@@ -59,44 +56,62 @@ function wcad_initialize_plugin() {
     if (class_exists('WCAD_Cron')) {
         new WCAD_Cron();
     }
-    if (class_exists('WCAD_Database')) {
-        new WCAD_Database();
-    }
-    if (class_exists('WCAD_Settings')) {
-        new WCAD_Settings();
-    }
-    if (class_exists('WCAD_Ajax_Handler')) {
-        new WCAD_Ajax_Handler();
-    }
 }
 add_action('plugins_loaded', 'wcad_initialize_plugin');
 
-// AJAX tvarkyklė
-class WCAD_Ajax_Handler {
+// Nuolaidų naudojimo žurnalo klasė
+class WCAD_Logs {
     public function __construct() {
-        add_action('wp_ajax_wcad_apply_discount', array($this, 'apply_discount'));
-        add_action('wp_ajax_nopriv_wcad_apply_discount', array($this, 'apply_discount'));
+        add_action('woocommerce_order_status_completed', array($this, 'log_discount_usage'));
     }
 
-    public function apply_discount() {
-        if (!isset($_POST['discount_code'])) {
-            wp_send_json_error(array('message' => 'Trūksta nuolaidos kodo.'));
+    public function log_discount_usage($order_id) {
+        $order = wc_get_order($order_id);
+        $discounts = $order->get_used_coupons();
+
+        if (!empty($discounts)) {
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'wcad_discount_logs';
+
+            foreach ($discounts as $discount) {
+                $wpdb->insert(
+                    $table_name,
+                    array(
+                        'order_id' => $order_id,
+                        'discount_code' => $discount,
+                        'used_at' => current_time('mysql')
+                    ),
+                    array('%d', '%s', '%s')
+                );
+            }
         }
-
-        $discount_code = sanitize_text_field($_POST['discount_code']);
-        $discount = $this->get_discount_by_code($discount_code);
-
-        if (!$discount) {
-            wp_send_json_error(array('message' => 'Nuolaidos kodas nerastas.'));
-        }
-
-        WC()->cart->add_fee($discount['discount_name'], -$discount['discount_value']);
-        wp_send_json_success(array('message' => 'Nuolaida pritaikyta!'));
-    }
-
-    private function get_discount_by_code($code) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'wcad_discounts';
-        return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE discount_name = %s AND status = 1", $code), ARRAY_A);
     }
 }
+
+// Planuojamų nuolaidų valdymo klasė
+class WCAD_Cron {
+    public function __construct() {
+        add_action('wcad_check_scheduled_discounts', array($this, 'apply_scheduled_discounts'));
+        if (!wp_next_scheduled('wcad_check_scheduled_discounts')) {
+            wp_schedule_event(time(), 'hourly', 'wcad_check_scheduled_discounts');
+        }
+    }
+
+    public function apply_scheduled_discounts() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'wcad_discounts';
+        $current_time = current_time('mysql');
+
+        // Aktyvuoti suplanuotas nuolaidas
+        $wpdb->query("UPDATE $table_name SET status = 1 WHERE status = 0 AND conditions LIKE '%scheduled%' AND conditions <= '$current_time'");
+    }
+}
+register_activation_hook(__FILE__, function() {
+    if (!wp_next_scheduled('wcad_check_scheduled_discounts')) {
+        wp_schedule_event(time(), 'hourly', 'wcad_check_scheduled_discounts');
+    }
+});
+
+register_deactivation_hook(__FILE__, function() {
+    wp_clear_scheduled_hook('wcad_check_scheduled_discounts');
+});

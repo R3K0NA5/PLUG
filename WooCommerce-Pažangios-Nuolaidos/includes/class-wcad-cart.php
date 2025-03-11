@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -23,7 +23,6 @@ include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-init.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-admin.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-discounts.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cart.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-activator.php';
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {
@@ -43,29 +42,11 @@ function wcad_initialize_plugin() {
 add_action('plugins_loaded', 'wcad_initialize_plugin');
 
 // Aktyvavimo funkcija
-class WCAD_Activator {
-    public static function activate() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'wcad_discounts';
-
-        $charset_collate = $wpdb->get_charset_collate();
-
-        $sql = "CREATE TABLE $table_name (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            discount_name varchar(255) NOT NULL,
-            discount_type varchar(50) NOT NULL,
-            discount_value float NOT NULL,
-            conditions text NOT NULL,
-            status tinyint(1) NOT NULL DEFAULT 1,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) $charset_collate;";
-
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
-    }
+function wcad_activate_plugin() {
+    require_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-activator.php';
+    WCAD_Activator::activate();
 }
-register_activation_hook(__FILE__, array('WCAD_Activator', 'activate'));
+register_activation_hook(__FILE__, 'wcad_activate_plugin');
 
 // Deaktyvavimo funkcija
 function wcad_deactivate_plugin() {

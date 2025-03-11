@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -38,52 +38,11 @@ include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/discount-list.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/discount-edit.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/settings.php';
 
-// Įtraukti nuolaidų valdiklį
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'templates/discount-widget.php';
+// Sukurti krepšelio nuolaidų atvaizdavimą
+file_put_contents(WC_AD_DISCOUNTS_PLUGIN_DIR . 'templates/discount-cart.php', "<?php\nif (!defined('ABSPATH')) exit;\n\nif (!WC()->cart) return;\n\n$applied_coupons = WC()->cart->get_applied_coupons();\n\nif (!empty($applied_coupons)) {\n    echo '<div class=\"woocommerce-info\">';\n    echo '<h3>Jūsų pritaikytos nuolaidos:</h3>';\n    echo '<ul>';\n    foreach ($applied_coupons as $coupon_code) {\n        $coupon = new WC_Coupon($coupon_code);\n        echo '<li>' . esc_html($coupon->get_description()) . ' (' . esc_html($coupon_code) . ')</li>';\n    }\n    echo '</ul>';\n    echo '</div>';\n} else {\n    echo '<div class=\"woocommerce-info\">Nėra pritaikytų nuolaidų.</div>';\n}\n?>");
 
-// Sukurti nuolaidų valdiklį
-class WCAD_Discount_Widget extends WP_Widget {
-    public function __construct() {
-        parent::__construct(
-            'wcad_discount_widget',
-            __('Nuolaidų Valdiklis', 'wc-advanced-discounts'),
-            ['description' => __('Rodomi aktyvūs nuolaidų pasiūlymai', 'wc-advanced-discounts')]
-        );
-    }
-
-    public function widget($args, $instance) {
-        echo $args['before_widget'];
-        echo $args['before_title'] . __('Aktyvios Nuolaidos', 'wc-advanced-discounts') . $args['after_title'];
-
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'wcad_discounts';
-        $discounts = $wpdb->get_results($wpdb->prepare("SELECT * FROM $table_name WHERE status = %d", 1));
-
-        if (!empty($discounts)) {
-            echo '<ul>';
-            foreach ($discounts as $discount) {
-                echo '<li>' . esc_html($discount->discount_name) . ': ';
-                echo esc_html($discount->discount_value);
-                echo ($discount->discount_type == 'percentage') ? '%' : '€';
-                echo '</li>';
-            }
-            echo '</ul>';
-        } else {
-            echo '<p>' . __('Nėra aktyvių nuolaidų.', 'wc-advanced-discounts') . '</p>';
-        }
-
-        echo $args['after_widget'];
-    }
-
-    public function form($instance) {
-        echo '<p>' . __('Šis valdiklis nerodo papildomų nustatymų.', 'wc-advanced-discounts') . '</p>';
-    }
-}
-
-function wcad_register_widget() {
-    register_widget('WCAD_Discount_Widget');
-}
-add_action('widgets_init', 'wcad_register_widget');
+// Sukurti nuolaidų pranešimus
+file_put_contents(WC_AD_DISCOUNTS_PLUGIN_DIR . 'templates/discount-message.php', "<?php\nif (!defined('ABSPATH')) exit;\n\n// Gauti visas aktyvias nuolaidas\nglobal $wpdb;\n$table_name = $wpdb->prefix . 'wcad_discounts';\n$discounts = $wpdb->get_results(\"SELECT * FROM $table_name WHERE status = 1\");\n\nif (!empty($discounts)) {\n    echo '<div class=\"woocommerce-info\">';\n    echo '<h3>Aktyvios Nuolaidos:</h3>';\n    echo '<ul>';\n    foreach ($discounts as $discount) {\n        echo '<li>' . esc_html($discount->discount_name) . ': ' . esc_html($discount->discount_value);\n        echo ($discount->discount_type == 'percentage') ? '%' : '€';\n        echo '</li>';\n    }\n    echo '</ul>';\n    echo '</div>';\n}\n?>");
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {

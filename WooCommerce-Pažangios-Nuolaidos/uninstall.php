@@ -1,6 +1,6 @@
 <?php
 /**
- * WooCommerce Pažangios Nuolaidos - Pašalinimo failas
+ * WooCommerce-Pažangios-Nuolaidos - Pašalinimo failas
  */
 
 // Užtikrinti, kad failas būtų paleistas tik per WordPress pašalinimo mechanizmą

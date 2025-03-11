@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -24,7 +24,6 @@ include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-admin.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-discounts.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cart.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-activator.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-deactivator.php';
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {
@@ -69,12 +68,11 @@ class WCAD_Activator {
 register_activation_hook(__FILE__, array('WCAD_Activator', 'activate'));
 
 // Deaktyvavimo funkcija
-class WCAD_Deactivator {
-    public static function deactivate() {
-        // Čia galima pridėti kodą išvalymui, jei reikia
-    }
+function wcad_deactivate_plugin() {
+    require_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-deactivator.php';
+    WCAD_Deactivator::deactivate();
 }
-register_deactivation_hook(__FILE__, array('WCAD_Deactivator', 'deactivate'));
+register_deactivation_hook(__FILE__, 'wcad_deactivate_plugin');
 
 // Sukurti administratoriaus meniu
 class WCAD_Admin {

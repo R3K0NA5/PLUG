@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0

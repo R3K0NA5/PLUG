@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -26,6 +26,10 @@ include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cart.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-activator.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-deactivator.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-shortcodes.php';
+include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-helpers.php';
+include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-logs.php';
+include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cron.php';
+include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/database.php';
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {
@@ -44,18 +48,33 @@ function wcad_initialize_plugin() {
     if (class_exists('WCAD_Shortcodes')) {
         new WCAD_Shortcodes();
     }
+    if (class_exists('WCAD_Helpers')) {
+        new WCAD_Helpers();
+    }
+    if (class_exists('WCAD_Logs')) {
+        new WCAD_Logs();
+    }
+    if (class_exists('WCAD_Cron')) {
+        new WCAD_Cron();
+    }
+    if (class_exists('WCAD_Database')) {
+        new WCAD_Database();
+    }
 }
 add_action('plugins_loaded', 'wcad_initialize_plugin');
 
-// Aktyvavimo funkcija
-class WCAD_Activator {
-    public static function activate() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'wcad_discounts';
+// Duomenų bazės valdymo klasė
+class WCAD_Database {
+    public function __construct() {
+        register_activation_hook(__FILE__, array($this, 'create_tables'));
+    }
 
+    public function create_tables() {
+        global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
 
-        $sql = "CREATE TABLE $table_name (
+        $table_discounts = $wpdb->prefix . 'wcad_discounts';
+        $sql_discounts = "CREATE TABLE $table_discounts (
             id mediumint(9) NOT NULL AUTO_INCREMENT,
             discount_name varchar(255) NOT NULL,
             discount_type varchar(50) NOT NULL,
@@ -66,41 +85,17 @@ class WCAD_Activator {
             PRIMARY KEY (id)
         ) $charset_collate;";
 
+        $table_logs = $wpdb->prefix . 'wcad_discount_logs';
+        $sql_logs = "CREATE TABLE $table_logs (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            order_id mediumint(9) NOT NULL,
+            discount_code varchar(255) NOT NULL,
+            used_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql);
-    }
-}
-register_activation_hook(__FILE__, array('WCAD_Activator', 'activate'));
-
-// Deaktyvavimo funkcija
-class WCAD_Deactivator {
-    public static function deactivate() {
-        // Čia galima pridėti kodą išvalymui, jei reikia
-    }
-}
-register_deactivation_hook(__FILE__, array('WCAD_Deactivator', 'deactivate'));
-
-// Šortkodų klasė
-class WCAD_Shortcodes {
-    public function __construct() {
-        add_shortcode('available_discounts', array($this, 'display_available_discounts'));
-    }
-
-    public function display_available_discounts() {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'wcad_discounts';
-        $discounts = $wpdb->get_results("SELECT * FROM $table_name WHERE status = 1");
-
-        if (!$discounts) {
-            return '<p>Nėra aktyvių nuolaidų.</p>';
-        }
-
-        $output = '<ul class="wcad-discount-list">';
-        foreach ($discounts as $discount) {
-            $output .= '<li><strong>' . esc_html($discount->discount_name) . '</strong>: ' . esc_html($discount->discount_value) . '</li>';
-        }
-        $output .= '</ul>';
-
-        return $output;
+        dbDelta($sql_discounts);
+        dbDelta($sql_logs);
     }
 }

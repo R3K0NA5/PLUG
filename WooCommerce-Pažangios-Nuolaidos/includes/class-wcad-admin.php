@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -21,42 +21,6 @@ define('WC_AD_DISCOUNTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 // Įtraukti pagrindinius failus
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-init.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-admin.php';
-
-// Inicializavimo klasė
-class WCAD_Init {
-    public function __construct() {
-        add_action('init', array($this, 'register_discount_post_type'));
-    }
-
-    public function register_discount_post_type() {
-        $labels = array(
-            'name' => 'Nuolaidos',
-            'singular_name' => 'Nuolaida',
-            'menu_name' => 'Nuolaidos',
-            'name_admin_bar' => 'Nuolaida',
-            'add_new' => 'Pridėti naują',
-            'add_new_item' => 'Pridėti naują nuolaidą',
-            'edit_item' => 'Redaguoti nuolaidą',
-            'new_item' => 'Nauja nuolaida',
-            'view_item' => 'Peržiūrėti nuolaidą',
-            'search_items' => 'Ieškoti nuolaidų',
-            'not_found' => 'Nuolaidų nerasta',
-            'not_found_in_trash' => 'Šiukšlinėje nuolaidų nerasta',
-        );
-
-        $args = array(
-            'labels' => $labels,
-            'public' => true,
-            'show_ui' => true,
-            'show_in_menu' => false,
-            'supports' => array('title', 'editor', 'custom-fields'),
-            'capability_type' => 'post',
-            'rewrite' => array('slug' => 'nuolaida'),
-        );
-
-        register_post_type('wcad_discount', $args);
-    }
-}
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {
@@ -91,30 +55,17 @@ class WCAD_Admin {
 
     public function wcad_create_admin_menu() {
         add_menu_page(
-            'Pažangios Nuolaidos',
-            'Nuolaidos',
-            'manage_options',
-            'wcad_discounts',
-            array($this, 'wcad_admin_dashboard'),
-            'dashicons-tag',
-            55
-        );
-
-        add_submenu_page(
-            'wcad_discounts',
-            'Visos Nuolaidos',
-            'Visos Nuolaidos',
-            'manage_options',
-            'wcad_discount_list',
-            array($this, 'wcad_discount_list_page')
+            'Pažangios Nuolaidos', // Pavadinimas meniu juostoje
+            'Nuolaidos', // Meniu pavadinimas
+            'manage_options', // Leidimai
+            'wcad_discounts', // Slug
+            array($this, 'wcad_admin_dashboard'), // Funkcija
+            'dashicons-tag', // Ikona
+            55 // Pozicija meniu
         );
     }
 
     public function wcad_admin_dashboard() {
         echo '<div class="wrap"><h1>Nuolaidų valdymas</h1><p>Čia bus nuolaidų valdymo skydelis.</p></div>';
-    }
-
-    public function wcad_discount_list_page() {
-        include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/discount-list.php';
     }
 }

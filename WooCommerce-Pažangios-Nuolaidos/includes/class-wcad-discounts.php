@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WooCommerce Pažangios Nuolaidos
+ * Plugin Name: WooCommerce-Pažangios-Nuolaidos
  * Plugin URI: https://yourwebsite.com
  * Aprašymas: Išsamus WooCommerce nuolaidų papildinys, palaikantis kategorijų, vartotojų rolių, BOGO pasiūlymų, rinkinių, sąlyginių nuolaidų ir dar daugiau.
  * Versija: 1.0.0
@@ -22,7 +22,6 @@ define('WC_AD_DISCOUNTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-init.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-admin.php';
 include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-discounts.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cart.php';
 
 // Inicializuoti papildinį
 function wcad_initialize_plugin() {
@@ -34,9 +33,6 @@ function wcad_initialize_plugin() {
     }
     if (class_exists('WCAD_Discounts')) {
         new WCAD_Discounts();
-    }
-    if (class_exists('WCAD_Cart')) {
-        new WCAD_Cart();
     }
 }
 add_action('plugins_loaded', 'wcad_initialize_plugin');
@@ -104,29 +100,5 @@ class WCAD_Discounts {
 
         $discount_amount = 5; // Testavimo suma, vėliau bus dinaminė
         $cart->add_fee(__('Nuolaida', 'wc-advanced-discounts'), -$discount_amount);
-    }
-}
-
-// Krepšelio nuolaidų valdymo klasė
-class WCAD_Cart {
-    public function __construct() {
-        add_action('woocommerce_before_calculate_totals', array($this, 'apply_cart_discounts'));
-    }
-
-    public function apply_cart_discounts($cart) {
-        if (is_admin() && !defined('DOING_AJAX')) {
-            return;
-        }
-
-        foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
-            $product_id = $cart_item['product_id'];
-            $discount_percentage = get_post_meta($product_id, '_wcad_discount_percentage', true);
-
-            if ($discount_percentage) {
-                $original_price = $cart_item['data']->get_regular_price();
-                $discounted_price = $original_price * ((100 - $discount_percentage) / 100);
-                $cart_item['data']->set_price($discounted_price);
-            }
-        }
     }
 }
