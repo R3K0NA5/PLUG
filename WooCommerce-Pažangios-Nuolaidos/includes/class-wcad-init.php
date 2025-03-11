@@ -1,6 +1,6 @@
 <?php
 /**
- * WooCommerce-Pažangios-Nuolaidos - Inicializacijos failas
+ * WooCommerce Pažangios Nuolaidos - Inicializacijos failas
  */
 
 // Užtikriname, kad failas negali būti pasiektas tiesiogiai
@@ -80,4 +80,24 @@ class WCAD_Init {
 
 // Inicializuojame klasę
 new WCAD_Init();
+
+// Pataisome `admin/views/` failus – pašaliname nereikalingą papildinio informaciją
+$views_to_fix = [
+    WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/dashboard.php',
+    WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/discount-edit.php',
+    WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/discount-list.php',
+    WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/logs.php',
+    WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/settings.php'
+];
+
+foreach ($views_to_fix as $view_file) {
+    if (file_exists($view_file)) {
+        $content = file_get_contents($view_file);
+        $content = preg_replace('/\/\*\*.*?\*\//s', '', $content, 1); // Pašaliname papildinio informaciją
+        if (!preg_match('/if \(!defined\(\'ABSPATH\'\)\) exit;/', $content)) {
+            $content = "<?php\nif (!defined('ABSPATH')) exit;\n" . $content;
+        }
+        file_put_contents($view_file, $content);
+    }
+}
 ?>
