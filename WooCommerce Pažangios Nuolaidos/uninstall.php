@@ -12,12 +12,12 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 global $wpdb;
 
 // Lentelių pavadinimai
-$discounts_table = $wpdb->prefix . 'wcad_discounts';
-$logs_table = $wpdb->prefix . 'wcad_logs';
+$discounts_table = esc_sql($wpdb->prefix . 'wcad_discounts');
+$logs_table = esc_sql($wpdb->prefix . 'wcad_logs');
 
 // Pašalinti duomenų bazės lenteles
-$wpdb->query("DROP TABLE IF EXISTS $discounts_table");
-$wpdb->query("DROP TABLE IF EXISTS $logs_table");
+$wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %s", $discounts_table ) );
+$wpdb->query( $wpdb->prepare( "DROP TABLE IF EXISTS %s", $logs_table ) );
 
 // Pašalinti visus papildinio nustatymus
 delete_option('wcad_allow_discount_stacking');
@@ -25,7 +25,6 @@ delete_option('wcad_default_discount_status');
 delete_option('wcad_default_expiration_days');
 
 // Pašalinti visus transients, jei jie buvo naudojami
-global $wpdb;
 $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_wcad_%'");
 
 // Pašalinti vartotojo meta duomenis, jei buvo naudojami
@@ -34,18 +33,65 @@ $wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE 'wcad_%'");
 // Pašalinti visus nustatymus iš `wp_options`
 $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'wcad_%'");
 
-// Papildomo valymo veiksmai (jei reikia galima pridėti)
+// AJAX funkcionalumo patikrinimas
+add_action('wp_ajax_wcad_delete_discount', 'wcad_delete_discount_callback');
+function wcad_delete_discount_callback() {
+    global $wpdb;
+    if (!isset($_POST['id']) || !is_numeric($_POST['id'])) {
+        wp_send_json_error(['message' => 'Neteisingas ID']);
+    }
+    $discount_id = intval($_POST['id']);
+    $table_name = $wpdb->prefix . 'wcad_discounts';
+    $wpdb->delete($table_name, ['id' => $discount_id], ['%d']);
+    wp_send_json_success(['message' => 'Nuolaida ištrinta']);
+}
 
-// Sukurti CSS failus
-file_put_contents(WC_AD_DISCOUNTS_PLUGIN_DIR . 'assets/css/admin.css', "/* WooCommerce Nuolaidų Administratoriaus Stiliai */\nbody { font-family: Arial, sans-serif; }\n.wcad-admin-table { width: 100%; border-collapse: collapse; }\n.wcad-admin-table th, .wcad-admin-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }\n.wcad-admin-table th { background-color: #f4f4f4; }\n");
+// AJAX funkcionalumas nuolaidų taikymui krepšelyje
+add_action('wp_ajax_wcad_apply_discount', 'wcad_apply_discount_callback');
+add_action('wp_ajax_nopriv_wcad_apply_discount', 'wcad_apply_discount_callback');
+function wcad_apply_discount_callback() {
+    if (!isset($_POST['code']) || empty($_POST['code'])) {
+        wp_send_json_error(['message' => 'Neteisingas nuolaidos kodas']);
+    }
+    $discount_code = sanitize_text_field($_POST['code']);
 
-file_put_contents(WC_AD_DISCOUNTS_PLUGIN_DIR . 'assets/css/frontend.css', "/* WooCommerce Nuolaidų Vartotojo Sąsajos Stiliai */\n.woocommerce-info { background-color: #f9f9f9; border-left: 5px solid #007cba; padding: 10px; margin-bottom: 15px; }\n");
+    // Tikriname ar nuolaida egzistuoja
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wcad_discounts';
+    $discount = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE discount_code = %s AND status = 1", $discount_code));
 
-// Sukurti JavaScript failus
-file_put_contents(WC_AD_DISCOUNTS_PLUGIN_DIR . 'assets/js/admin.js', "// WooCommerce Nuolaidų Administratoriaus Skriptai\n(function($) {\n    $(document).ready(function() {\n        $('.delete-discount').on('click', function(e) {\n            e.preventDefault();\n            if (confirm('Ar tikrai norite ištrinti šią nuolaidą?')) {\n                let discountId = $(this).data('id');\n                $.post(ajaxurl, { action: 'wcad_delete_discount', id: discountId }, function(response) {\n                    location.reload();\n                });\n            }\n        });\n    });\n})(jQuery);");
+    if (!$discount) {
+        wp_send_json_error(['message' => 'Nuolaida nerasta arba neaktyvi']);
+    }
 
-file_put_contents(WC_AD_DISCOUNTS_PLUGIN_DIR . 'assets/js/frontend.js', "// WooCommerce Nuolaidų Vartotojo Sąsajos Skriptai\n(function($) {\n    $(document).ready(function() {\n        $('.apply-discount').on('click', function(e) {\n            e.preventDefault();\n            let discountCode = $('#discount-code').val();\n            $.post(wcad_ajax.url, { action: 'wcad_apply_discount', code: discountCode }, function(response) {\n                alert(response.message);\n                location.reload();\n            });\n        });\n    });\n})(jQuery);");
+    // Pridedame nuolaidą į WooCommerce krepšelį
+    WC()->cart->add_discount($discount_code);
 
-// Sukurti paveikslėlių katalogą, jei reikalinga (tuščias failas)
-touch(WC_AD_DISCOUNTS_PLUGIN_DIR . 'assets/images/.placeholder');
+    wp_send_json_success(['message' => 'Nuolaida pritaikyta!']);
+}
+
+// AJAX funkcionalumas nuolaidų peržiūrai be puslapio perkrovimo
+add_action('wp_ajax_wcad_get_discounts', 'wcad_get_discounts_callback');
+add_action('wp_ajax_nopriv_wcad_get_discounts', 'wcad_get_discounts_callback');
+function wcad_get_discounts_callback() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'wcad_discounts';
+    $discounts = $wpdb->get_results("SELECT * FROM $table_name WHERE status = 1");
+
+    if (!$discounts) {
+        wp_send_json_error(['message' => 'Nėra aktyvių nuolaidų']);
+    }
+
+    $response = [];
+    foreach ($discounts as $discount) {
+        $response[] = [
+            'name' => esc_html($discount->discount_name),
+            'code' => esc_html($discount->discount_code),
+            'value' => esc_html($discount->discount_value),
+            'type' => esc_html($discount->discount_type)
+        ];
+    }
+
+    wp_send_json_success(['discounts' => $response]);
+}
 ?>
