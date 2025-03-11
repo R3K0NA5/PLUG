@@ -1,125 +1,68 @@
 <?php
-
-
 // Uždrausti tiesioginę prieigą
 if (!defined('ABSPATH')) exit;
 
-// Apibrėžti konstantas
-define('WC_AD_DISCOUNTS_VERSION', '1.0.0');
-define('WC_AD_DISCOUNTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('WC_AD_DISCOUNTS_PLUGIN_URL', plugin_dir_url(__FILE__));
-
-// Įtraukti pagrindinius failus
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-init.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-admin.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-discounts.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cart.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-activator.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-deactivator.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-shortcodes.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-helpers.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-logs.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cron.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/database.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/settings.php';
-
-// Inicializuoti papildinį
-function wcad_initialize_plugin() {
-    if (class_exists('WCAD_Init')) {
-        new WCAD_Init();
-    }
-    if (class_exists('WCAD_Admin')) {
-        new WCAD_Admin();
-    }
-    if (class_exists('WCAD_Discounts')) {
-        new WCAD_Discounts();
-    }
-    if (class_exists('WCAD_Cart')) {
-        new WCAD_Cart();
-    }
-    if (class_exists('WCAD_Shortcodes')) {
-        new WCAD_Shortcodes();
-    }
-    if (class_exists('WCAD_Helpers')) {
-        new WCAD_Helpers();
-    }
-    if (class_exists('WCAD_Logs')) {
-        new WCAD_Logs();
-    }
-    if (class_exists('WCAD_Cron')) {
-        new WCAD_Cron();
-    }
-    if (class_exists('WCAD_Database')) {
-        new WCAD_Database();
-    }
-    if (class_exists('WCAD_Settings')) {
-        new WCAD_Settings();
-    }
-}
-add_action('plugins_loaded', 'wcad_initialize_plugin');
-
-// Duomenų bazės valdymo klasė
-class WCAD_Database {
-    public function __construct() {
-        register_activation_hook(__FILE__, array($this, 'create_tables'));
-    }
-
-    public function create_tables() {
-        global $wpdb;
-        $charset_collate = $wpdb->get_charset_collate();
-
-        $table_discounts = $wpdb->prefix . 'wcad_discounts';
-        $sql_discounts = "CREATE TABLE $table_discounts (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            discount_name varchar(255) NOT NULL,
-            discount_type varchar(50) NOT NULL,
-            discount_value float NOT NULL,
-            conditions text NOT NULL,
-            status tinyint(1) NOT NULL DEFAULT 1,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) $charset_collate;";
-
-        $table_logs = $wpdb->prefix . 'wcad_discount_logs';
-        $sql_logs = "CREATE TABLE $table_logs (
-            id mediumint(9) NOT NULL AUTO_INCREMENT,
-            order_id mediumint(9) NOT NULL,
-            discount_code varchar(255) NOT NULL,
-            used_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) $charset_collate;";
-
-        require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-        dbDelta($sql_discounts);
-        dbDelta($sql_logs);
-    }
-}
-
-// Nustatymų valdymo klasė
 class WCAD_Settings {
+    /**
+     * Konstruktorius - registruoja nustatymų puslapį
+     */
     public function __construct() {
         add_action('admin_menu', array($this, 'add_settings_page'));
+        add_action('admin_init', array($this, 'register_settings'));
     }
 
+    /**
+     * Pridedame nustatymų puslapį
+     */
     public function add_settings_page() {
-        add_submenu_page(
-            'wcad_discounts',
-            'Papildinio nustatymai',
-            'Nustatymai',
+        add_options_page(
+            __('Nuolaidų nustatymai', 'wc-advanced-discounts'),
+            __('Nuolaidų nustatymai', 'wc-advanced-discounts'),
             'manage_options',
             'wcad_settings',
-            array($this, 'settings_page_content')
+            array($this, 'render_settings_page')
         );
     }
 
-    public function settings_page_content() {
-        echo '<div class="wrap">';
-        echo '<h1>Nuolaidų papildinio nustatymai</h1>';
-        echo '<form method="post" action="options.php">';
-        settings_fields('wcad_settings_group');
-        do_settings_sections('wcad_settings');
-        submit_button();
-        echo '</form>';
-        echo '</div>';
+    /**
+     * Užregistruojame nustatymus
+     */
+    public function register_settings() {
+        register_setting('wcad_settings_group', 'wcad_allow_discount_stacking');
+        register_setting('wcad_settings_group', 'wcad_default_expiration_days');
+    }
+
+    /**
+     * Atvaizduojame nustatymų puslapį
+     */
+    public function render_settings_page() {
+        ?>
+        <div class="wrap">
+            <h1><?php _e('Nuolaidų nustatymai', 'wc-advanced-discounts'); ?></h1>
+            <form method="post" action="options.php">
+                <?php settings_fields('wcad_settings_group'); ?>
+                <?php do_settings_sections('wcad_settings_page'); ?>
+                <table class="form-table">
+                    <tr>
+                        <th><label for="wcad_allow_discount_stacking">Leisti Nuolaidų Krovimą</label></th>
+                        <td><input type="checkbox" name="wcad_allow_discount_stacking" id="wcad_allow_discount_stacking" value="1" <?php checked(1, get_option('wcad_allow_discount_stacking'), true); ?>></td>
+                    </tr>
+                    <tr>
+                        <th><label for="wcad_default_expiration_days">Numatomas Galiojimo Laikas (dienomis)</label></th>
+                        <td><input type="number" name="wcad_default_expiration_days" id="wcad_default_expiration_days" value="<?php echo esc_attr(get_option('wcad_default_expiration_days', 30)); ?>" class="regular-text"></td>
+                    </tr>
+                </table>
+                <p class="submit">
+                    <input type="submit" name="save_settings" class="button-primary" value="Išsaugoti Nustatymus">
+                </p>
+            </form>
+        </div>
+        <?php
     }
 }
+
+// Inicializuojame klasę tik jei ji dar neegzistuoja
+if (!class_exists('WCAD_Settings')) {
+    new WCAD_Settings();
+}
+?>

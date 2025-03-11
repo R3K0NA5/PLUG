@@ -53,4 +53,5 @@ function wcad_initialize_plugin() {
     new WCAD_Ajax_Handler();
 }
 add_action('plugins_loaded', 'wcad_initialize_plugin');
+
 ?>
