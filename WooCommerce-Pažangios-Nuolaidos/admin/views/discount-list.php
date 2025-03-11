@@ -1,66 +1,38 @@
 <?php
-
-
 // Uždrausti tiesioginę prieigą
 if (!defined('ABSPATH')) exit;
 
-// Apibrėžti konstantas
-define('WC_AD_DISCOUNTS_VERSION', '1.0.0');
-define('WC_AD_DISCOUNTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('WC_AD_DISCOUNTS_PLUGIN_URL', plugin_dir_url(__FILE__));
-
-// Įtraukti pagrindinius failus
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-init.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-admin.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-discounts.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cart.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-activator.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-deactivator.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-shortcodes.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-helpers.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-logs.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/class-wcad-cron.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/database.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/settings.php';
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'includes/ajax-handler.php';
-
-// Administravimo peržiūros failai
-include_once WC_AD_DISCOUNTS_PLUGIN_DIR . 'admin/views/discount-list.php';
-
-// Inicializuoti papildinį
-function wcad_initialize_plugin() {
-    if (class_exists('WCAD_Init')) {
-        new WCAD_Init();
-    }
-    if (class_exists('WCAD_Admin')) {
-        new WCAD_Admin();
-    }
-    if (class_exists('WCAD_Discounts')) {
-        new WCAD_Discounts();
-    }
-    if (class_exists('WCAD_Cart')) {
-        new WCAD_Cart();
-    }
-    if (class_exists('WCAD_Shortcodes')) {
-        new WCAD_Shortcodes();
-    }
-    if (class_exists('WCAD_Helpers')) {
-        new WCAD_Helpers();
-    }
-    if (class_exists('WCAD_Logs')) {
-        new WCAD_Logs();
-    }
-    if (class_exists('WCAD_Cron')) {
-        new WCAD_Cron();
-    }
-    if (class_exists('WCAD_Database')) {
-        new WCAD_Database();
-    }
-    if (class_exists('WCAD_Settings')) {
-        new WCAD_Settings();
-    }
-    if (class_exists('WCAD_Ajax_Handler')) {
-        new WCAD_Ajax_Handler();
-    }
-}
-add_action('plugins_loaded', 'wcad_initialize_plugin');
+// Nuolaidų sąrašo puslapis
+?>
+<div class="wrap">
+    <h1>Visos Nuolaidos</h1>
+    <table class="widefat fixed">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Pavadinimas</th>
+            <th>Tipas</th>
+            <th>Vertė</th>
+            <th>Būsena</th>
+            <th>Veiksmai</th>
+        </tr>
+        </thead>
+        <tbody>
+        <?php
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'wcad_discounts';
+        $discounts = $wpdb->get_results("SELECT * FROM $table_name");
+        foreach ($discounts as $discount) {
+            echo '<tr>';
+            echo '<td>' . esc_html($discount->id) . '</td>';
+            echo '<td>' . esc_html($discount->discount_name) . '</td>';
+            echo '<td>' . esc_html($discount->discount_type) . '</td>';
+            echo '<td>' . esc_html($discount->discount_value) . '</td>';
+            echo '<td>' . ($discount->status ? 'Aktyvus' : 'Neaktyvus') . '</td>';
+            echo '<td><a href="admin.php?page=wcad_discount_edit&id=' . $discount->id . '" class="button">Redaguoti</a> | <a href="#" class="button delete-discount" data-id="' . $discount->id . '">Ištrinti</a></td>';
+            echo '</tr>';
+        }
+        ?>
+        </tbody>
+    </table>
+</div>
